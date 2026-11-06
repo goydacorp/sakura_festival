@@ -2470,8 +2470,7 @@
   <script type="module">
     const $ = (s, root = document) => root.querySelector(s);
     const $$ = (s, root = document) => [...root.querySelectorAll(s)];
-    const FORCE_STATIC = true; // сервер должен выглядеть как локальный index
-    const reduceMotion = FORCE_STATIC || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const mobile = window.matchMedia('(max-width: 900px)').matches;
     const gsap = window.gsap;
     const ScrollTrigger = window.ScrollTrigger;
