@@ -451,6 +451,7 @@
     }
 
     .hero-three {
+      display: none;
       position: absolute;
       inset: 0;
       width: 100%;
@@ -481,7 +482,7 @@
       mix-blend-mode: multiply;
       will-change: transform;
       transition: margin .32s ease-out;
-      animation: petalFall calc(var(--duration, 24s) * .3) linear var(--delay, 0s) infinite;
+      animation: petalFall calc(var(--duration, 24s) * .4) linear var(--delay, 0s) infinite;
     }
 
     @keyframes petalFall {
@@ -510,7 +511,7 @@
       width: min(60vw, 760px);
       left: 2vw;
       bottom: -4%;
-      opacity: .72;
+      opacity: .12;
       mix-blend-mode: multiply;
     }
 
@@ -520,7 +521,7 @@
       width: auto;
       right: 8%;
       bottom: -7%;
-      opacity: .98;
+      opacity: .50;
     }
 
     .hero-copy {
@@ -2193,7 +2194,7 @@
           <circle cx="60" cy="60" r="54" />
         </svg>
       </div>
-      <div class="preload-caption">Цветущая Сакура · Ялта</div>
+      <div class="preload-caption">Цветущая Сакура · Фестиваль</div>
     </div>
     <i class="preload-petal" style="--x:-190px;--y:-115px;--r:40deg"></i>
     <i class="preload-petal" style="--x:150px;--y:-150px;--r:140deg"></i>
@@ -2403,7 +2404,7 @@
         <figure class="merch-object hoodie" data-depth="-18"><img src="assets/hoodie.png"
             alt="Худи фестиваля с фирменным паттерном">
           <figcaption class="merch-caption"><span>01 / Худи</span><span>Узор кои и сакура</span></figcaption>
-        </figure><br><br>
+        </figure>
         <figure class="merch-object totes" data-depth="22"><img src="assets/tote-bags.png"
             alt="Шопперы фестиваля с фирменным паттерном">
           <figcaption class="merch-caption"><span>02 / Шопперы</span><span>Два фирменных паттерна</span></figcaption>
@@ -2423,8 +2424,7 @@
       <h2 class="serif-title footer-title">До встречи<br>под сакурой.</h2>
       <p>Оставьте место для тишины. И пусть этот момент цветёт чуть дольше.</p>
     </div>
-    <div class="footer-bottom"><span>© ЦВЕТУЩАЯ САКУРА</span><span><a href="https://goydacorp.ru/">СДЕЛАНО СТУДИЕЙ
-          "ГОЙДА"</a></span><a href="#top">В НАЧАЛО
+    <div class="footer-bottom"><span>© ЦВЕТУЩАЯ САКУРА</span><span>MA — ИСКУССТВО ПУСТОТЫ</span><a href="#top">В НАЧАЛО
         ↑</a></div>
   </footer>
 
@@ -2472,6 +2472,9 @@
     const $$ = (s, root = document) => [...root.querySelectorAll(s)];
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const mobile = window.matchMedia('(max-width: 900px)').matches;
+    // Keep the hero identical on file:// and GitHub Pages: the static brand illustrations
+    // are the intended composition. The optional Three.js duplicate scene stays disabled.
+    const ENABLE_HERO_WEBGL = false;
     const gsap = window.gsap;
     const ScrollTrigger = window.ScrollTrigger;
     if (gsap && ScrollTrigger) gsap.registerPlugin(ScrollTrigger);
@@ -2585,13 +2588,11 @@
       $('.footer').classList.add('is-awake');
     }
 
-    // Personal ticket: preview + download. Works on file:// by falling back to a
-    // procedural ticket (no external images → no tainted canvas).
+    // Personal ticket: visual preview and real downloadable PNG, built from brand assets.
     const nameInput = $('#guestName');
     const ticketName = $('#ticketName');
     const preview = $('#ticketPreview');
     const safeName = value => (value || '').trim().replace(/[<>]/g, '').slice(0, 26) || 'Гость фестиваля';
-
     $('#ticketForm').addEventListener('submit', e => {
       e.preventDefault();
       const name = safeName(nameInput.value);
@@ -2599,189 +2600,83 @@
       preview.classList.remove('generated');
       void preview.offsetWidth;
       preview.classList.add('generated');
-      if (gsap && !reduceMotion) gsap.fromTo(preview,
-        { y: -90, rotate: -11, rotateX: 25, opacity: .3 },
-        { y: -12, rotate: 1.6, rotateX: 0, opacity: 1, duration: 1.05, ease: 'bounce.out' });
+      if (gsap && !reduceMotion) gsap.fromTo(preview, { y: -90, rotate: -11, rotateX: 25, opacity: .3 }, { y: -12, rotate: 1.6, rotateX: 0, opacity: 1, duration: 1.05, ease: 'bounce.out' });
     });
-
-    const loadImg = src => new Promise((resolve, reject) => {
-      const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = src;
-    });
+    const loadImg = src => new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = src; });
     const drawImageContain = (ctx, image, x, y, maxW, maxH) => {
-      const r = Math.min(maxW / image.naturalWidth, maxH / image.naturalHeight);
-      const w = image.naturalWidth * r, h = image.naturalHeight * r;
+      const ratio = Math.min(maxW / image.naturalWidth, maxH / image.naturalHeight);
+      const w = image.naturalWidth * ratio, h = image.naturalHeight * ratio;
       ctx.drawImage(image, x, y + (maxH - h) / 2, w, h);
     };
     const drawImageCover = (ctx, image, x, y, w, h) => {
-      const s = Math.max(w / image.naturalWidth, h / image.naturalHeight);
-      const sw = w / s, sh = h / s;
+      const scale = Math.max(w / image.naturalWidth, h / image.naturalHeight);
+      const sw = w / scale, sh = h / scale;
       const sx = (image.naturalWidth - sw) / 2, sy = (image.naturalHeight - sh) / 2;
       ctx.drawImage(image, sx, sy, sw, sh, x, y, w, h);
     };
-
     $('#downloadTicket').addEventListener('click', async () => {
       const canvas = document.createElement('canvas');
       canvas.width = 2000; canvas.height = 1000;
       const ctx = canvas.getContext('2d');
-      const paperColor = '#D1BEAB', redColor = '#951B1E', inkColor = '#2B2A29';
-
-      // Try brand images. On file:// they load but taint the canvas — we detect that below.
-      let images = null;
+      const paperColor = '#D1BEAB';
+      const redColor = '#951B1E';
+      const inkColor = '#2B2A29';
+      ctx.fillStyle = paperColor; ctx.fillRect(0, 0, canvas.width, canvas.height);
       try {
         const [paper, logo, wave] = await Promise.all([
           loadImg('assets/washi-paper.jpg'),
           loadImg('assets/brand-wordmark.png'),
           loadImg('assets/hokusai-great-wave.jpg')
         ]);
-        images = { paper, logo, wave };
-      } catch (e) { images = null; }
-
-      const drawPaper = (useImages) => {
-        ctx.fillStyle = paperColor;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        if (useImages && images?.paper) {
-          ctx.globalAlpha = .35;
-          ctx.drawImage(images.paper, 0, 0, canvas.width, canvas.height);
-          ctx.globalAlpha = 1;
-        } else {
-          // Procedural paper grain (no external file → no taint).
-          const noise = document.createElement('canvas');
-          noise.width = 220; noise.height = 220;
-          const n = noise.getContext('2d');
-          const d = n.createImageData(220, 220);
-          for (let i = 0; i < d.data.length; i += 4) {
-            const v = (Math.random() * 255) | 0;
-            d.data[i] = d.data[i + 1] = d.data[i + 2] = v;
-            d.data[i + 3] = 16;
-          }
-          n.putImageData(d, 0, 0);
-          ctx.fillStyle = ctx.createPattern(noise, 'repeat');
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-      };
-
-      const drawWave = (useImages) => {
-        if (useImages && images?.wave) {
-          drawImageCover(ctx, images.wave, 110, 580, 1120, 340);
-          return;
-        }
-        ctx.save();
-        ctx.fillStyle = 'rgba(149,27,30,.06)';
-        ctx.fillRect(110, 580, 1120, 340);
-        ctx.strokeStyle = 'rgba(149,27,30,.45)';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(110, 580, 1120, 340);
-        for (let row = 0; row < 7; row++) {
-          ctx.beginPath();
-          for (let px = 0; px <= 1120; px += 8) {
-            const t = px / 1120;
-            const cy = 580 + 170 + row * 22
-              + Math.sin(t * Math.PI * 3 + row * .6) * 34
-              + Math.cos(t * Math.PI * 5 + row) * 14;
-            if (px === 0) ctx.moveTo(110 + px, cy); else ctx.lineTo(110 + px, cy);
-          }
-          ctx.strokeStyle = `rgba(149,27,30,${.10 + row * .03})`;
-          ctx.lineWidth = row % 2 === 0 ? 2 : 1.2;
-          ctx.stroke();
-        }
-        ctx.restore();
-      };
-
-      const drawLogo = (useImages) => {
-        if (useImages && images?.logo) { drawImageContain(ctx, images.logo, 104, 78, 620, 280); return; }
-        ctx.fillStyle = redColor;
-        ctx.font = 'bold 128px "Yu Gothic UI", Georgia, serif';
-        ctx.fillText('ЦВЕТУЩАЯ', 110, 205);
-        ctx.fillText('САКУРА', 110, 330);
-        ctx.lineWidth = 3; ctx.strokeStyle = redColor;
-        ctx.beginPath(); ctx.moveTo(110, 365); ctx.lineTo(760, 365); ctx.stroke();
-      };
-
-      const drawTicket = (useImages) => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        drawPaper(useImages);
-
-        // Double red frame
+        // Paper grain and the double red frame mirror the perforated logobook ticket.
+        ctx.globalAlpha = .35; ctx.drawImage(paper, 0, 0, canvas.width, canvas.height); ctx.globalAlpha = 1;
         ctx.strokeStyle = redColor; ctx.lineWidth = 14; ctx.strokeRect(28, 28, 1944, 944);
         ctx.strokeStyle = 'rgba(149,27,30,.55)'; ctx.lineWidth = 3; ctx.strokeRect(48, 48, 1904, 904);
-
-        // Perforations
+        // Side perforations are intentional ticket details, not clipped corners.
         ctx.fillStyle = paperColor; ctx.strokeStyle = redColor; ctx.lineWidth = 3;
         for (let y = 112; y < 900; y += 82) {
-          for (const x of [28, 1972]) {
-            ctx.beginPath(); ctx.arc(x, y, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-          }
+          for (const x of [28, 1972]) { ctx.beginPath(); ctx.arc(x, y, 17, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
         }
-
-        drawLogo(useImages);
-
+        // Full, uncut official logotype; it is fitted proportionally inside its own safe area.
+        drawImageContain(ctx, logo, 104, 78, 620, 280);
         ctx.fillStyle = redColor; ctx.font = '500 28px "Yu Gothic UI", sans-serif';
-        ctx.fillText('ЯПОНСКИЙ САД · КРЫМ · ЯЛТА', 110, 420);
-
+        ctx.fillText('ЯПОНСКИЙ САД · КРЫМ · ЯЛТА', 110, 398);
         ctx.fillStyle = inkColor; ctx.font = '500 26px "Yu Gothic UI", sans-serif';
-        ctx.fillText('БИЛЕТ ОФОРМЛЕН ДЛЯ', 110, 480);
-
+        ctx.fillText('БИЛЕТ ОФОРМЛЕН ДЛЯ', 110, 468);
         let name = safeName(nameInput.value);
         ctx.fillStyle = redColor; ctx.font = '48px "Yu Gothic UI", sans-serif';
         while (ctx.measureText(name).width > 1130 && name.length > 4) name = name.slice(0, -1);
-        ctx.fillText(name, 110, 545);
-
-        drawWave(useImages);
-
+        ctx.fillText(name, 110, 535);
+        // Main engraving occupies the broad left field, as in the original ticket artwork.
+        drawImageCover(ctx, wave, 110, 570, 1120, 350);
         ctx.fillStyle = inkColor; ctx.font = '19px "Yu Gothic UI", sans-serif';
         ctx.fillText('Кацусика Хокусай · «Большая волна в Канагаве», 1831 г.', 110, 953);
-
-        // Dashed separator + side strip
+        // Separate vertical admission strip with a crisp barcode.
         ctx.setLineDash([9, 9]); ctx.strokeStyle = redColor; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.moveTo(1360, 92); ctx.lineTo(1360, 908); ctx.stroke();
-        ctx.setLineDash([]);
-
+        ctx.beginPath(); ctx.moveTo(1360, 92); ctx.lineTo(1360, 908); ctx.stroke(); ctx.setLineDash([]);
         ctx.save(); ctx.translate(1440, 760); ctx.rotate(-Math.PI / 2);
         ctx.fillStyle = redColor; ctx.font = 'bold 28px "Yu Gothic UI", sans-serif';
         ctx.fillText('ВХОДНОЙ БИЛЕТ · VIP', 0, 0); ctx.restore();
-
-        // Barcode
         ctx.fillStyle = redColor;
-        let x = 1520, i = 0;
+        let x = 1520;
+        let barIndex = 0;
         while (x < 1895) {
-          const w = [5, 9, 3, 7, 4, 11, 3, 6, 4, 8, 3, 5][i % 12];
-          ctx.fillRect(x, 290, w, 470);
-          x += w + [5, 4, 7, 3, 6][i % 5];
-          i++;
+          const width = [5, 9, 3, 7, 4, 11, 3, 6, 4, 8, 3, 5][barIndex % 12];
+          ctx.fillRect(x, 290, width, 470);
+          x += width + [5, 4, 7, 3, 6][barIndex % 5];
+          barIndex++;
         }
-        ctx.font = '22px "Yu Gothic UI", sans-serif';
-        ctx.fillText('06—24 АПРЕЛЯ', 1510, 845);
-      };
-
-      const toPngBlob = () => {
-        const dataUrl = canvas.toDataURL('image/png');
-        const bin = atob(dataUrl.split(',')[1]);
-        const bytes = new Uint8Array(bin.length);
-        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-        return new Blob([bytes], { type: 'image/png' });
-      };
-
-      // First pass: try real brand images (works over http(s)).
-      drawTicket(true);
-      let blob;
-      try {
-        blob = toPngBlob();
+        ctx.font = '22px "Yu Gothic UI", sans-serif'; ctx.fillText('06—24 АПРЕЛЯ', 1510, 845);
       } catch (err) {
-        // file:// tainted canvas → reset (clears origin-clean flag) and redraw procedurally.
-        canvas.width = canvas.width;
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        drawTicket(false);
-        blob = toPngBlob();
+        // In the unlikely event of an asset load failure, the canvas still produces a usable ticket.
+        ctx.strokeStyle = redColor; ctx.lineWidth = 12; ctx.strokeRect(28, 28, 1944, 944);
+        ctx.fillStyle = redColor; ctx.font = '64px "Yu Gothic UI", sans-serif'; ctx.fillText('ЦВЕТУЩАЯ САКУРА', 110, 220);
+        ctx.fillStyle = inkColor; ctx.font = '54px "Yu Gothic UI", sans-serif'; ctx.fillText(safeName(nameInput.value), 110, 430);
       }
-
-      const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.download = 'tsvetushchaya-sakura-ticket.png';
-      link.href = url;
-      document.body.appendChild(link);
+      link.href = canvas.toDataURL('image/png');
       link.click();
-      link.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
     });
 
     // Light pointer parallax on the two actual logobook merchandise mockups.
@@ -2795,7 +2690,7 @@
 
     // Three.js: layered brand engraving, custom paper-wave displacement and ink dissolve.
     // The canvas is desktop-only; mobile uses the same original illustrations as 2D layers.
-    if (!mobile && !reduceMotion) {
+    if (ENABLE_HERO_WEBGL && !mobile && !reduceMotion) {
       const canvas = $('#heroThree');
       try {
         const THREE = await import('https://cdn.jsdelivr.net/npm/three@0.179.1/build/three.module.js');
